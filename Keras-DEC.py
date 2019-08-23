@@ -95,9 +95,6 @@ else:
             x.append( cv2.cvtColor(cv2.imread( paths[0]+item ), cv2.COLOR_BGR2GRAY) )
             y.append( randint(0,9) )
 
-        if len(x) > 1024:
-            break
-
     x = np.array(x)
     y = np.array(y)
             
