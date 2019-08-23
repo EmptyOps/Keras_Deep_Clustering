@@ -14,6 +14,33 @@ from keras.initializers import VarianceScaling
 from sklearn.cluster import KMeans
 import metrics
 
+import cv2
+from random import randint
+import os, sys
+
+####################
+import argparse
+
+#use absolute paths
+ABS_PATh = os.path.dirname(os.path.abspath(__file__)) + "/"
+
+# Instantiate the parser
+parser = argparse.ArgumentParser(description='a utility')
+
+parser.add_argument('-d', '--dir_to_process', type=str, nargs='?', help='dir_to_process')
+parser.add_argument('-o', '--out_to_dir',type=str, nargs='?',help='if provided output will be written to csv(semicolon separated) otherwise to stdout. ')
+parser.add_argument('-b', '--is_debug', action='store_true', help='A boolean True False')
+parser.add_argument('-s', '--is_use_sample_data', action='store_true', help='A boolean True False')
+
+FLAGS = parser.parse_args()
+print(FLAGS)
+
+if FLAGS.dir_to_process == "":
+    paths = []  #specify static here
+else:
+    paths = [FLAGS.dir_to_process+"/" ]
+####################    
+
 
 def autoencoder(dims, act='relu', init='glorot_uniform'):
     """
@@ -47,12 +74,43 @@ def autoencoder(dims, act='relu', init='glorot_uniform'):
     return Model(inputs=input_img, outputs=decoded, name='AE'), Model(inputs=input_img, outputs=encoded, name='encoder')
 
 
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
+if FLAGS.is_use_sample_data:
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
-x = np.concatenate((x_train, x_test))
-y = np.concatenate((y_train, y_test))
-x = x.reshape((x.shape[0], -1))
-x = np.divide(x, 255.)
+    x = np.concatenate((x_train, x_test))
+    y = np.concatenate((y_train, y_test))
+    x = x.reshape((x.shape[0], -1))
+    x = np.divide(x, 255.)
+else:
+    x = [] 
+    y = [] 
+
+    items = os.listdir( paths[0] )
+    for item in items:
+
+        if item == '.DS_Store':
+            continue
+
+        if os.path.isfile(paths[0]+item):
+            x.append( cv2.cvtColor(cv2.imread( paths[0]+item ), cv2.COLOR_BGR2GRAY) )
+            y.append( randint(0,9) )
+
+        if len(x) > 1024:
+            break
+
+    x = np.array(x)
+    y = np.array(y)
+            
+    x = x.reshape((x.shape[0], -1))
+    x = np.divide(x, 255.)
+
+# print(x)    
+# print(y)
+print( len(x) )     
+print( len(y) ) 
+print( x.shape )     
+print( y.shape ) 
+print( x[0].max(axis=0) )
 
 n_clusters = len(np.unique(y))
 x.shape
