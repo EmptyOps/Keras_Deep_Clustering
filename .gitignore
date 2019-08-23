@@ -11,3 +11,6 @@ results/*.csv
 *.h5
 *.HDF5
 __pycache__
+
+# Ignore folder named start with '__'
+__*
