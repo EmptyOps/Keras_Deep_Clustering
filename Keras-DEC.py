@@ -101,8 +101,8 @@ else:
             y.append( randint(0,9) )
             y_paths.append( paths[0]+item )
 
-        if len(x) > 1024:
-            break
+        # if len(x) > 1024:
+        #     break
 
     x = np.array(x)
     y = np.array(y)
