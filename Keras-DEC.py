@@ -39,6 +39,10 @@ if FLAGS.dir_to_process == "":
     paths = []  #specify static here
 else:
     paths = [FLAGS.dir_to_process+"/" ]
+
+if FLAGS.out_to_dir == None or FLAGS.out_to_dir == "":
+    raise Exception("Please specify out_to_dir")
+
 ####################    
 
 
@@ -74,6 +78,7 @@ def autoencoder(dims, act='relu', init='glorot_uniform'):
     return Model(inputs=input_img, outputs=decoded, name='AE'), Model(inputs=input_img, outputs=encoded, name='encoder')
 
 
+y_paths = []
 if FLAGS.is_use_sample_data:
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
@@ -94,6 +99,10 @@ else:
         if os.path.isfile(paths[0]+item):
             x.append( cv2.cvtColor(cv2.imread( paths[0]+item ), cv2.COLOR_BGR2GRAY) )
             y.append( randint(0,9) )
+            y_paths.append( paths[0]+item )
+
+        if len(x) > 1024:
+            break
 
     x = np.array(x)
     y = np.array(y)
@@ -287,6 +296,17 @@ import sklearn.metrics
 import matplotlib.pyplot as plt
 sns.set(font_scale=3)
 confusion_matrix = sklearn.metrics.confusion_matrix(y, y_pred)
+
+#label
+if not FLAGS.out_to_dir == None and not FLAGS.out_to_dir == "":
+    sizeyp = len(y_pred)
+    for i in range(0, sizeyp):
+        if not os.path.isdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) ):
+            os.mkdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) )
+
+        os.rename( y_paths[i], FLAGS.out_to_dir + "/" + str(y_pred[i]) + "/" + os.path.basename(y_paths[i]) )
+
+
 
 plt.figure(figsize=(16, 14))
 sns.heatmap(confusion_matrix, annot=True, fmt="d", annot_kws={"size": 20});
