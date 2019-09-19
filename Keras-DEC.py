@@ -90,19 +90,24 @@ else:
     x = [] 
     y = [] 
 
+    #dir loop
     items = os.listdir( paths[0] )
     for item in items:
+        
+        lis_img = os.listdir(item)
 
-        if item == '.DS_Store':
-            continue
+        for item_img in lis_img:
 
-        if os.path.isfile(paths[0]+item):
-            x.append( cv2.cvtColor(cv2.imread( paths[0]+item ), cv2.COLOR_BGR2GRAY) )
-            y.append( randint(0,9) )
-            y_paths.append( paths[0]+item )
+            if item_img == '.DS_Store':
+                continue
 
-        # if len(x) > 1024:
-        #     break
+            if os.path.isfile(paths[0]+item_img):
+                x.append( cv2.cvtColor(cv2.imread( paths[0]+item_img ), cv2.COLOR_BGR2GRAY) )
+                y.append( randint(0,9) )
+                y_paths.append( paths[0]+item_img )
+
+            # if len(x) > 1024:
+            #     break
 
     x = np.array(x)
     y = np.array(y)
@@ -130,7 +135,7 @@ dims = [x.shape[-1], 500, 500, 2000, 10]
 init = VarianceScaling(scale=1. / 3., mode='fan_in',
                            distribution='uniform')
 pretrain_optimizer = SGD(lr=1, momentum=0.9)
-pretrain_epochs = 300
+pretrain_epochs = 1200  # 300
 batch_size = 256
 save_dir = './results'
 
@@ -243,7 +248,7 @@ def target_distribution(q):
 
 loss = 0
 index = 0
-maxiter = 8000
+maxiter = 32000 # 8000
 update_interval = 140
 index_array = np.arange(x.shape[0])
 
