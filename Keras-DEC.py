@@ -14,6 +14,7 @@ from keras.initializers import VarianceScaling
 from sklearn.cluster import KMeans
 import metrics
 
+from numpy import array
 from random import randint
 import os, sys
 
@@ -143,6 +144,8 @@ else:
                 x_tmp.append( x[i] )
                 y_tmp.append( y[i] )
 
+        x_tmp = array(x_tmp)
+        y_tmp = array(y_tmp)
         x = np.copy(x_tmp)
         y = np.copy(y_tmp)
         
