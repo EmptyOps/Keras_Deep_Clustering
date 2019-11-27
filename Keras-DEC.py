@@ -32,6 +32,11 @@ parser.add_argument('-o', '--out_to_dir',type=str, nargs='?',help='if provided o
 parser.add_argument('-b', '--is_debug', action='store_true', help='A boolean True False')
 parser.add_argument('-s', '--is_use_sample_data', action='store_true', help='A boolean True False')
 
+parser.add_argument('-t', '--total_input_files', type=str, nargs='?', help='total_input_files')
+parser.add_argument('-i', '--input_file', type=str, nargs='?', help='input_file')
+parser.add_argument('-l', '--input_labels_file', type=str, nargs='?', help='input_labels_file')
+parser.add_argument('-tc', '--total_supported_classes', type=str, nargs='?', help='total_supported_classes')
+
 FLAGS = parser.parse_args()
 print(FLAGS)
 
@@ -40,7 +45,7 @@ if FLAGS.dir_to_process == "":
 else:
     paths = [FLAGS.dir_to_process+"/" ]
 
-if FLAGS.out_to_dir == None or FLAGS.out_to_dir == "":
+if (FLAGS.out_to_dir == None or FLAGS.out_to_dir == "") and ( FLAGS.total_input_files == ""):
     raise Exception("Please specify out_to_dir")
 
 ####################    
@@ -92,26 +97,58 @@ else:
 
 
     #dir loop
-    items = os.listdir( paths[0] )
-    for item in items:
+    if not paths[0] == "":
+        items = os.listdir( paths[0] )
+        for item in items:
 
-        if item == '.DS_Store':
-            continue
-
-        lis_img = os.listdir(paths[0]+item)
-        for item_img in lis_img:
-
-            if item_img == '.DS_Store':
+            if item == '.DS_Store':
                 continue
 
-            if os.path.isfile(paths[0]+item+ "/" +item_img):
-                x.append( cv2.cvtColor(cv2.imread( paths[0]+item+ "/" +item_img ), cv2.COLOR_BGR2GRAY) )
-                y.append( randint(0,29) )    #randint(0,9)
-                y_paths.append( paths[0]+item+ "/" +item_img )
+            lis_img = os.listdir(paths[0]+item)
+            for item_img in lis_img:
 
-            # if len(x) > 1024:
-            #     break
+                if item_img == '.DS_Store':
+                    continue
 
+                if os.path.isfile(paths[0]+item+ "/" +item_img):
+                    x.append( cv2.cvtColor(cv2.imread( paths[0]+item+ "/" +item_img ), cv2.COLOR_BGR2GRAY) )
+                    y.append( randint(0,29) )    #randint(0,9)
+                    y_paths.append( paths[0]+item+ "/" +item_img )
+
+                # if len(x) > 1024:
+                #     break
+
+    else:
+        total_input_files = int(FLAGS.total_input_files)
+        print("total_input_files")
+        print(total_input_files)
+        for i in range(0, total_input_files):
+            print("total_input_files i " + str(i))
+            if i == 0:
+                x = array( json.load( open( input_file.replace('{i}', str(i)) ) ) ) 
+                y = array( json.load( open( input_labels_file.replace('{i}', str(i)) ) ) ) 
+            else:
+                x = np.concatenate( ( x, array( json.load( open( input_file.replace('{i}', str(i)) ) ) ) ), axis=0 )
+                y = np.concatenate( ( y, array( json.load( open( input_labels_file.replace('{i}', str(i)) ) ) ) ), axis=0 )
+                
+        x_tmp = []
+        y_tmp = []
+        lenx = len(x)
+        total_supported_classes = int(FLAGS.total_supported_classes)
+        print("lenx")
+        print(len)
+        for i in range(0, lenx):
+            print("lenx i " + str(i))
+            if y[i] < total_supported_classes:
+                x_tmp.append( x[i] )
+                y_tmp.append( y[i] )
+
+        x = np.copy(x_tmp)
+        y = np.copy(y_tmp)
+        
+        x_tmp = []
+        y_tmp = []
+                
     x = np.array(x)
     y = np.array(y)
             
