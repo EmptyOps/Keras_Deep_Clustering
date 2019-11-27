@@ -132,18 +132,20 @@ else:
     else:
     
         if os.path.exists(FLAGS.base_classes_file):
-            self.x = array( json.load( open( FLAGS.base_classes_file ) ) ) 
+            x_tmp = array( json.load( open( FLAGS.base_classes_file ) ) ) 
             x = [] 
             y = []
-            xlen = len(self.x)
+            xlen = len(x_tmp)
             for i in range(0, xlen):
-                len1 = len(self.x[i])
+                len1 = len(x_tmp[i])
                 for j in range(0, len1):
-                    x.append( self.x[i][j] )
+                    x.append( x_tmp[i][j] )
                     y.append( i )
             
             x = np.array(x)
             y = np.array(y)
+            
+            x_tmp = []
             
         else:
             total_input_files = int(FLAGS.total_input_files)
