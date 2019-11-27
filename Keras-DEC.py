@@ -14,7 +14,6 @@ from keras.initializers import VarianceScaling
 from sklearn.cluster import KMeans
 import metrics
 
-import cv2
 from random import randint
 import os, sys
 
@@ -97,7 +96,8 @@ else:
 
 
     #dir loop
-    if not paths[0] == "":
+    if len(paths) > 0:
+        import cv2
         items = os.listdir( paths[0] )
         for item in items:
 
