@@ -140,7 +140,6 @@ else:
         print("lenx")
         print(len)
         for i in range(0, lenx):
-            print("lenx i " + str(i))
             if y[i] < total_supported_classes:
                 x_tmp.append( x[i] )
                 y_tmp.append( y[i] )
@@ -349,13 +348,16 @@ confusion_matrix = sklearn.metrics.confusion_matrix(y, y_pred)
 
 #label
 if not FLAGS.out_to_dir == None and not FLAGS.out_to_dir == "":
-    sizeyp = len(y_pred)
-    for i in range(0, sizeyp):
-        if not os.path.isdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) ):
-            os.mkdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) )
+    if not FLAGS.dir_to_process == None and not FLAGS.dir_to_process == "":
+        sizeyp = len(y_pred)
+        for i in range(0, sizeyp):
+            if not os.path.isdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) ):
+                os.mkdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) )
 
-        os.rename( y_paths[i], FLAGS.out_to_dir + "/" + str(y_pred[i]) + "/" + os.path.basename(y_paths[i]) )
-
+            os.rename( y_paths[i], FLAGS.out_to_dir + "/" + str(y_pred[i]) + "/" + os.path.basename(y_paths[i]) )
+    else:
+        with open( FLAGS.out_to_dir + "/Keras-DEC-y_pred.json", 'w') as outfile:
+            json.dump(y_pred.tolist(), outfile)                      
 
 
 plt.figure(figsize=(16, 14))
@@ -364,6 +366,9 @@ plt.title("Confusion matrix", fontsize=30)
 plt.ylabel('True label', fontsize=25)
 plt.xlabel('Clustering label', fontsize=25)
 plt.show()
+
+input("Confusion matrix created, press enter to continue further...")
+
 
 from sklearn.utils.linear_assignment_ import linear_assignment
 
