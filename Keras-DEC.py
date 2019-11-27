@@ -39,7 +39,7 @@ parser.add_argument('-tc', '--total_supported_classes', type=str, nargs='?', hel
 FLAGS = parser.parse_args()
 print(FLAGS)
 
-if FLAGS.dir_to_process == "":
+if FLAGS.dir_to_process == None or FLAGS.dir_to_process == "":
     paths = []  #specify static here
 else:
     paths = [FLAGS.dir_to_process+"/" ]
