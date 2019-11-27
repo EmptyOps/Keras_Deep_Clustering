@@ -38,6 +38,11 @@ parser.add_argument('-i', '--input_file', type=str, nargs='?', help='input_file'
 parser.add_argument('-l', '--input_labels_file', type=str, nargs='?', help='input_labels_file')
 parser.add_argument('-tc', '--total_supported_classes', type=str, nargs='?', help='total_supported_classes')
 
+parser.add_argument('-pt', '--pretrain_epochs', type=str, nargs='?', help='pretrain_epochs')
+parser.add_argument('-mi', '--maxiter', type=str, nargs='?', help='maxiter')
+parser.add_argument('-ui', '--update_interval', type=str, nargs='?', help='update_interval')
+
+
 FLAGS = parser.parse_args()
 print(FLAGS)
 
@@ -179,7 +184,7 @@ dims = [x.shape[-1], 500, 500, 600, 10]
 init = VarianceScaling(scale=1. / 3., mode='fan_in',
                            distribution='uniform')
 pretrain_optimizer = SGD(lr=1, momentum=0.9)
-pretrain_epochs = 1200  # 300
+pretrain_epochs = int(FLAGS.pretrain_epochs) #1200  # 300
 batch_size = 256
 save_dir = './results'
 
@@ -292,8 +297,8 @@ def target_distribution(q):
 
 loss = 0
 index = 0
-maxiter = 32000 # 8000
-update_interval = 140
+maxiter = int(FLAGS.maxiter) #32000 # 8000
+update_interval = int(FLAGS.update_interval) #140
 index_array = np.arange(x.shape[0])
 
 tol = 0.001 # tolerance threshold to stop training
