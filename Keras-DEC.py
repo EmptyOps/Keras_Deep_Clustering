@@ -37,6 +37,7 @@ parser.add_argument('-t', '--total_input_files', type=str, nargs='?', help='tota
 parser.add_argument('-i', '--input_file', type=str, nargs='?', help='input_file')
 parser.add_argument('-l', '--input_labels_file', type=str, nargs='?', help='input_labels_file')
 parser.add_argument('-tc', '--total_supported_classes', type=str, nargs='?', help='total_supported_classes')
+parser.add_argument('-bc', '--base_classes_file', type=str, nargs='?', help='base_classes_file')
 
 parser.add_argument('-pt', '--pretrain_epochs', type=str, nargs='?', help='pretrain_epochs')
 parser.add_argument('-mi', '--maxiter', type=str, nargs='?', help='maxiter')
@@ -125,40 +126,56 @@ else:
                 # if len(x) > 1024:
                 #     break
 
+        x = np.array(x)
+        y = np.array(y)
+                
     else:
-        total_input_files = int(FLAGS.total_input_files)
-        print("total_input_files")
-        print(total_input_files)
-        for i in range(0, total_input_files):
-            print("total_input_files i " + str(i))
-            if i == 0:
-                x = array( json.load( open( FLAGS.input_file.replace('{i}', str(i)) ) ) ) 
-                y = array( json.load( open( FLAGS.input_labels_file.replace('{i}', str(i)) ) ) ) 
-            else:
-                x = np.concatenate( ( x, array( json.load( open( FLAGS.input_file.replace('{i}', str(i)) ) ) ) ), axis=0 )
-                y = np.concatenate( ( y, array( json.load( open( FLAGS.input_labels_file.replace('{i}', str(i)) ) ) ) ), axis=0 )
-                
-        x_tmp = []
-        y_tmp = []
-        lenx = len(x)
-        total_supported_classes = int(FLAGS.total_supported_classes)
-        print("lenx")
-        print(len)
-        for i in range(0, lenx):
-            if y[i] < total_supported_classes:
-                x_tmp.append( x[i] )
-                y_tmp.append( y[i] )
+    
+        if os.path.exists(FLAGS.base_classes_file):
+            self.x = array( json.load( open( FLAGS.base_classes_file ) ) ) 
+            x = [] 
+            y = []
+            xlen = len(self.x)
+            for i in range(0, xlen):
+                len1 = len(self.x[i])
+                for j in range(0, len1):
+                    x.append( self.x[i][j] )
+                    y.append( i )
+            
+            x = np.array(x)
+            y = np.array(y)
+            
+        else:
+            total_input_files = int(FLAGS.total_input_files)
+            print("total_input_files")
+            print(total_input_files)
+            for i in range(0, total_input_files):
+                print("total_input_files i " + str(i))
+                if i == 0:
+                    x = array( json.load( open( FLAGS.input_file.replace('{i}', str(i)) ) ) ) 
+                    y = array( json.load( open( FLAGS.input_labels_file.replace('{i}', str(i)) ) ) ) 
+                else:
+                    x = np.concatenate( ( x, array( json.load( open( FLAGS.input_file.replace('{i}', str(i)) ) ) ) ), axis=0 )
+                    y = np.concatenate( ( y, array( json.load( open( FLAGS.input_labels_file.replace('{i}', str(i)) ) ) ) ), axis=0 )
+                    
+            x_tmp = []
+            y_tmp = []
+            lenx = len(x)
+            total_supported_classes = int(FLAGS.total_supported_classes)
+            print("lenx")
+            print(len)
+            for i in range(0, lenx):
+                if y[i] < total_supported_classes:
+                    x_tmp.append( x[i] )
+                    y_tmp.append( y[i] )
 
-        x_tmp = array(x_tmp)
-        y_tmp = array(y_tmp)
-        x = np.copy(x_tmp)
-        y = np.copy(y_tmp)
-        
-        x_tmp = []
-        y_tmp = []
-                
-    x = np.array(x)
-    y = np.array(y)
+            x_tmp = array(x_tmp)
+            y_tmp = array(y_tmp)
+            x = np.copy(x_tmp)
+            y = np.copy(y_tmp)
+            
+            x_tmp = []
+            y_tmp = []
             
     x = x.reshape((x.shape[0], -1))
     x = np.divide(x, 255.)
