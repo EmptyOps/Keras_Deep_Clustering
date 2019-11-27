@@ -127,11 +127,11 @@ else:
         for i in range(0, total_input_files):
             print("total_input_files i " + str(i))
             if i == 0:
-                x = array( json.load( open( input_file.replace('{i}', str(i)) ) ) ) 
-                y = array( json.load( open( input_labels_file.replace('{i}', str(i)) ) ) ) 
+                x = array( json.load( open( FLAGS.input_file.replace('{i}', str(i)) ) ) ) 
+                y = array( json.load( open( FLAGS.input_labels_file.replace('{i}', str(i)) ) ) ) 
             else:
-                x = np.concatenate( ( x, array( json.load( open( input_file.replace('{i}', str(i)) ) ) ) ), axis=0 )
-                y = np.concatenate( ( y, array( json.load( open( input_labels_file.replace('{i}', str(i)) ) ) ) ), axis=0 )
+                x = np.concatenate( ( x, array( json.load( open( FLAGS.input_file.replace('{i}', str(i)) ) ) ) ), axis=0 )
+                y = np.concatenate( ( y, array( json.load( open( FLAGS.input_labels_file.replace('{i}', str(i)) ) ) ) ), axis=0 )
                 
         x_tmp = []
         y_tmp = []
