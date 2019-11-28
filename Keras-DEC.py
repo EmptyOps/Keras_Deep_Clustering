@@ -132,21 +132,8 @@ else:
     else:
     
         if os.path.exists(FLAGS.base_classes_file):
-            x_tmp = array( json.load( open( FLAGS.base_classes_file ) ) ) 
-            x = [] 
-            y = []
-            xlen = len(x_tmp)
-            for i in range(0, xlen):
-                len1 = len(x_tmp[i])
-                for j in range(0, len1):
-                    x.append( x_tmp[i][j] )
-                    y.append( i )
-            
-            x = np.array(x)
-            y = np.array(y)
-            
-            x_tmp = []
-            
+            x = array( json.load( open( FLAGS.base_classes_file ) ) ) 
+            y = array( json.load( open( FLAGS.base_classes_file+"_labels.json" ) ) ) 
         else:
             total_input_files = int(FLAGS.total_input_files)
             print("total_input_files")
@@ -178,6 +165,11 @@ else:
             
             x_tmp = []
             y_tmp = []
+            
+            with open( base_classes_file, 'w') as outfile:
+                json.dump(x.tolist(), outfile)                      
+            with open( base_classes_file+"_labels.json", 'w') as outfile:
+                json.dump(y.tolist(), outfile)                      
             
     x = x.reshape((x.shape[0], -1))
     x = np.divide(x, 255.)
