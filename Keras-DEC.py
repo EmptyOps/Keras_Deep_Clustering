@@ -43,6 +43,8 @@ parser.add_argument('-pt', '--pretrain_epochs', type=str, nargs='?', help='pretr
 parser.add_argument('-mi', '--maxiter', type=str, nargs='?', help='maxiter')
 parser.add_argument('-ui', '--update_interval', type=str, nargs='?', help='update_interval')
 
+parser.add_argument('-csp', '--confusion_matrix_save_path', type=str, nargs='?', help='confusion_matrix_save_path')
+
 
 FLAGS = parser.parse_args()
 print(FLAGS)
@@ -381,7 +383,10 @@ sns.heatmap(confusion_matrix, annot=True, fmt="d", annot_kws={"size": 20});
 plt.title("Confusion matrix", fontsize=30)
 plt.ylabel('True label', fontsize=25)
 plt.xlabel('Clustering label', fontsize=25)
-plt.show()
+if not FLAGS.confusion_matrix_save_path == None and not FLAGS.confusion_matrix_save_path == "":
+    plt.savefig(FLAGS.confusion_matrix_save_path)
+else:
+    plt.show()
 
 input("Confusion matrix created, press enter to continue further...")
 
