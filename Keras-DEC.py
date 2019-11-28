@@ -166,9 +166,9 @@ else:
             x_tmp = []
             y_tmp = []
             
-            with open( base_classes_file, 'w') as outfile:
+            with open( FLAGS.base_classes_file, 'w') as outfile:
                 json.dump(x.tolist(), outfile)                      
-            with open( base_classes_file+"_labels.json", 'w') as outfile:
+            with open( FLAGS.base_classes_file+"_labels.json", 'w') as outfile:
                 json.dump(y.tolist(), outfile)                      
             
     x = x.reshape((x.shape[0], -1))
