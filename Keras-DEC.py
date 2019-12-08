@@ -14,9 +14,10 @@ from keras.initializers import VarianceScaling
 from sklearn.cluster import KMeans
 import metrics
 
-import cv2
+from numpy import array
 from random import randint
 import os, sys
+import json
 
 ####################
 import argparse
@@ -32,15 +33,28 @@ parser.add_argument('-o', '--out_to_dir',type=str, nargs='?',help='if provided o
 parser.add_argument('-b', '--is_debug', action='store_true', help='A boolean True False')
 parser.add_argument('-s', '--is_use_sample_data', action='store_true', help='A boolean True False')
 
+parser.add_argument('-t', '--total_input_files', type=str, nargs='?', help='total_input_files')
+parser.add_argument('-i', '--input_file', type=str, nargs='?', help='input_file')
+parser.add_argument('-l', '--input_labels_file', type=str, nargs='?', help='input_labels_file')
+parser.add_argument('-tc', '--total_supported_classes', type=str, nargs='?', help='total_supported_classes')
+parser.add_argument('-bc', '--base_classes_file', type=str, nargs='?', help='base_classes_file')
+
+parser.add_argument('-pt', '--pretrain_epochs', type=str, nargs='?', help='pretrain_epochs')
+parser.add_argument('-mi', '--maxiter', type=str, nargs='?', help='maxiter')
+parser.add_argument('-ui', '--update_interval', type=str, nargs='?', help='update_interval')
+
+parser.add_argument('-csp', '--confusion_matrix_save_path', type=str, nargs='?', help='confusion_matrix_save_path')
+
+
 FLAGS = parser.parse_args()
 print(FLAGS)
 
-if FLAGS.dir_to_process == "":
+if FLAGS.dir_to_process == None or FLAGS.dir_to_process == "":
     paths = []  #specify static here
 else:
     paths = [FLAGS.dir_to_process+"/" ]
 
-if FLAGS.out_to_dir == None or FLAGS.out_to_dir == "":
+if (FLAGS.out_to_dir == None or FLAGS.out_to_dir == "") and ( FLAGS.total_input_files == ""):
     raise Exception("Please specify out_to_dir")
 
 ####################    
@@ -92,28 +106,72 @@ else:
 
 
     #dir loop
-    items = os.listdir( paths[0] )
-    for item in items:
+    if len(paths) > 0:
+        import cv2
+        items = os.listdir( paths[0] )
+        for item in items:
 
-        if item == '.DS_Store':
-            continue
-
-        lis_img = os.listdir(paths[0]+item)
-        for item_img in lis_img:
-
-            if item_img == '.DS_Store':
+            if item == '.DS_Store':
                 continue
 
-            if os.path.isfile(paths[0]+item+ "/" +item_img):
-                x.append( cv2.cvtColor(cv2.imread( paths[0]+item+ "/" +item_img ), cv2.COLOR_BGR2GRAY) )
-                y.append( randint(0,29) )    #randint(0,9)
-                y_paths.append( paths[0]+item+ "/" +item_img )
+            lis_img = os.listdir(paths[0]+item)
+            for item_img in lis_img:
 
-            # if len(x) > 1024:
-            #     break
+                if item_img == '.DS_Store':
+                    continue
 
-    x = np.array(x)
-    y = np.array(y)
+                if os.path.isfile(paths[0]+item+ "/" +item_img):
+                    x.append( cv2.cvtColor(cv2.imread( paths[0]+item+ "/" +item_img ), cv2.COLOR_BGR2GRAY) )
+                    y.append( randint(0,29) )    #randint(0,9)
+                    y_paths.append( paths[0]+item+ "/" +item_img )
+
+                # if len(x) > 1024:
+                #     break
+
+        x = np.array(x)
+        y = np.array(y)
+                
+    else:
+    
+        if os.path.exists(FLAGS.base_classes_file):
+            x = array( json.load( open( FLAGS.base_classes_file ) ) ) 
+            y = array( json.load( open( FLAGS.base_classes_file+"_labels.json" ) ) ) 
+        else:
+            total_input_files = int(FLAGS.total_input_files)
+            print("total_input_files")
+            print(total_input_files)
+            for i in range(0, total_input_files):
+                print("total_input_files i " + str(i))
+                if i == 0:
+                    x = array( json.load( open( FLAGS.input_file.replace('{i}', str(i)) ) ) ) 
+                    y = array( json.load( open( FLAGS.input_labels_file.replace('{i}', str(i)) ) ) ) 
+                else:
+                    x = np.concatenate( ( x, array( json.load( open( FLAGS.input_file.replace('{i}', str(i)) ) ) ) ), axis=0 )
+                    y = np.concatenate( ( y, array( json.load( open( FLAGS.input_labels_file.replace('{i}', str(i)) ) ) ) ), axis=0 )
+                    
+            x_tmp = []
+            y_tmp = []
+            lenx = len(x)
+            total_supported_classes = int(FLAGS.total_supported_classes)
+            print("lenx")
+            print(len)
+            for i in range(0, lenx):
+                if y[i] < total_supported_classes:
+                    x_tmp.append( x[i] )
+                    y_tmp.append( y[i] )
+
+            x_tmp = array(x_tmp)
+            y_tmp = array(y_tmp)
+            x = np.copy(x_tmp)
+            y = np.copy(y_tmp)
+            
+            x_tmp = []
+            y_tmp = []
+            
+            with open( FLAGS.base_classes_file, 'w') as outfile:
+                json.dump(x.tolist(), outfile)                      
+            with open( FLAGS.base_classes_file+"_labels.json", 'w') as outfile:
+                json.dump(y.tolist(), outfile)                      
             
     x = x.reshape((x.shape[0], -1))
     x = np.divide(x, 255.)
@@ -139,7 +197,7 @@ dims = [x.shape[-1], 500, 500, 600, 10]
 init = VarianceScaling(scale=1. / 3., mode='fan_in',
                            distribution='uniform')
 pretrain_optimizer = SGD(lr=1, momentum=0.9)
-pretrain_epochs = 1200  # 300
+pretrain_epochs = int(FLAGS.pretrain_epochs) #1200  # 300
 batch_size = 256
 save_dir = './results'
 
@@ -195,7 +253,7 @@ class ClusteringLayer(Layer):
         assert len(input_shape) == 2
         input_dim = input_shape[1]
         self.input_spec = InputSpec(dtype=K.floatx(), shape=(None, input_dim))
-        self.clusters = self.add_weight((self.n_clusters, input_dim), initializer='glorot_uniform', name='clusters')
+        self.clusters = self.add_weight(shape=(self.n_clusters, input_dim), initializer='glorot_uniform', name='clusters')
         if self.initial_weights is not None:
             self.set_weights(self.initial_weights)
             del self.initial_weights
@@ -252,8 +310,8 @@ def target_distribution(q):
 
 loss = 0
 index = 0
-maxiter = 32000 # 8000
-update_interval = 140
+maxiter = int(FLAGS.maxiter) #32000 # 8000
+update_interval = int(FLAGS.update_interval) #140
 index_array = np.arange(x.shape[0])
 
 tol = 0.001 # tolerance threshold to stop training
@@ -308,13 +366,16 @@ confusion_matrix = sklearn.metrics.confusion_matrix(y, y_pred)
 
 #label
 if not FLAGS.out_to_dir == None and not FLAGS.out_to_dir == "":
-    sizeyp = len(y_pred)
-    for i in range(0, sizeyp):
-        if not os.path.isdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) ):
-            os.mkdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) )
+    if not FLAGS.dir_to_process == None and not FLAGS.dir_to_process == "":
+        sizeyp = len(y_pred)
+        for i in range(0, sizeyp):
+            if not os.path.isdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) ):
+                os.mkdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) )
 
-        os.rename( y_paths[i], FLAGS.out_to_dir + "/" + str(y_pred[i]) + "/" + os.path.basename(y_paths[i]) )
-
+            os.rename( y_paths[i], FLAGS.out_to_dir + "/" + str(y_pred[i]) + "/" + os.path.basename(y_paths[i]) )
+    else:
+        with open( FLAGS.out_to_dir + "/Keras-DEC-y_pred.json", 'w') as outfile:
+            json.dump(y_pred.tolist(), outfile)                      
 
 
 plt.figure(figsize=(16, 14))
@@ -322,7 +383,13 @@ sns.heatmap(confusion_matrix, annot=True, fmt="d", annot_kws={"size": 20});
 plt.title("Confusion matrix", fontsize=30)
 plt.ylabel('True label', fontsize=25)
 plt.xlabel('Clustering label', fontsize=25)
-plt.show()
+if not FLAGS.confusion_matrix_save_path == None and not FLAGS.confusion_matrix_save_path == "":
+    plt.savefig(FLAGS.confusion_matrix_save_path)
+else:
+    plt.show()
+
+input("Confusion matrix created, press enter to continue further...")
+
 
 from sklearn.utils.linear_assignment_ import linear_assignment
 
