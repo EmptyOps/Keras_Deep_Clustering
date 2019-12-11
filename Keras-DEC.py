@@ -133,7 +133,7 @@ else:
                 
     else:
     
-        if os.path.exists(FLAGS.base_classes_file):
+        if not FLAGS.base_classes_file == None and os.path.exists(FLAGS.base_classes_file):
             x = array( json.load( open( FLAGS.base_classes_file ) ) ) 
             y = array( json.load( open( FLAGS.base_classes_file+"_labels.json" ) ) ) 
         else:
