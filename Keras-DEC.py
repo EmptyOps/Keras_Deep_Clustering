@@ -168,10 +168,11 @@ else:
             x_tmp = []
             y_tmp = []
             
-            with open( FLAGS.base_classes_file, 'w') as outfile:
-                json.dump(x.tolist(), outfile)                      
-            with open( FLAGS.base_classes_file+"_labels.json", 'w') as outfile:
-                json.dump(y.tolist(), outfile)                      
+            if not FLAGS.base_classes_file == None:
+                with open( FLAGS.base_classes_file, 'w') as outfile:
+                    json.dump(x.tolist(), outfile)                      
+                with open( FLAGS.base_classes_file+"_labels.json", 'w') as outfile:
+                    json.dump(y.tolist(), outfile)                      
             
     x = x.reshape((x.shape[0], -1))
     x = np.divide(x, 255.)
