@@ -4,7 +4,7 @@ import keras
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
     def __init__(self, list_IDs=None, labels=None, batch_size=32, dim=(32,32,32), n_channels=1,
-                 n_classes=10, shuffle=True, datatype='.npy', datadirs=[], is_label_to_categorical=False):
+                 n_classes=10, shuffle=True, datatype='.npy', datadirs=[], is_label_to_categorical=False, is_normalize_image_datatype=False):
         'Initialization need to provide either list_IDs or datadirs(dir paths)'
         self.dim = dim
         self.batch_size = batch_size
@@ -14,6 +14,7 @@ class DataGenerator(keras.utils.Sequence):
         self.datatype = datatype
         self.datadirs = datadirs
         self.is_label_to_categorical = is_label_to_categorical
+        self.is_normalize_image_datatype = is_normalize_image_datatype
 
 
         if not list_IDs == None:
@@ -72,6 +73,10 @@ class DataGenerator(keras.utils.Sequence):
             else:
                 break
 
+        #reset, useful especially when iterator is called manually
+        if index == self.__len__():
+            self.dir_batch_index = 0
+
     def init_random_labels(self, list_IDs_len, n_classes):
         'usefull for unsupervised learning. class labels are generated in sequence for reproducibility'
         return np.random.choice( list_IDs_len, n_classes )
@@ -105,6 +110,9 @@ class DataGenerator(keras.utils.Sequence):
 
         # Generate data
         X, y = self.__data_generation(list_IDs_temp)
+
+        if self.is_normalize_image_datatype:
+            X = np.divide(X, 255.)
 
         return X, y
 

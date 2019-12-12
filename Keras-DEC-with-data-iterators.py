@@ -11,8 +11,10 @@ from keras.models import Model
 from keras.optimizers import SGD
 from keras import callbacks
 from keras.initializers import VarianceScaling
-from sklearn.cluster import KMeans
+# from sklearn.cluster import KMeans
+import keras.initializers.MiniBatchKMeans as KMeans
 import metrics
+from DataGenerator import DataGenerator
 
 import cv2
 from random import randint
@@ -27,10 +29,17 @@ ABS_PATh = os.path.dirname(os.path.abspath(__file__)) + "/"
 # Instantiate the parser
 parser = argparse.ArgumentParser(description='a utility')
 
-parser.add_argument('-d', '--dir_to_process', type=str, nargs='?', help='dir_to_process')
+parser.add_argument('-d', '--dir_to_process', type=str, nargs='?', help='dir_to_process, separate by pipe if multiple directories')
 parser.add_argument('-o', '--out_to_dir',type=str, nargs='?',help='if provided output will be written to csv(semicolon separated) otherwise to stdout. ')
 parser.add_argument('-b', '--is_debug', action='store_true', help='A boolean True False')
-parser.add_argument('-s', '--is_use_sample_data', action='store_true', help='A boolean True False')
+#parser.add_argument('-s', '--is_use_sample_data', action='store_true', help='A boolean True False')
+
+parser.add_argument('--batch_size', type=int, nargs='?', help='batch_size')
+parser.add_argument('--n_classes', type=int, nargs='?', help='n_classes')
+
+parser.add_argument('-pt', '--pretrain_epochs', type=str, nargs='?', help='pretrain_epochs')
+parser.add_argument('-mi', '--maxiter', type=str, nargs='?', help='maxiter')
+parser.add_argument('-ui', '--update_interval', type=str, nargs='?', help='update_interval')
 
 FLAGS = parser.parse_args()
 print(FLAGS)
@@ -38,7 +47,10 @@ print(FLAGS)
 if FLAGS.dir_to_process == "":
     paths = []  #specify static here
 else:
-    paths = [FLAGS.dir_to_process+"/" ]
+    if not "|" in FLAGS.dir_to_process:
+        paths = [FLAGS.dir_to_process+"/" ]
+    else:
+        paths = FLAGS.dir_to_process.split("|")
 
 if FLAGS.out_to_dir == None or FLAGS.out_to_dir == "":
     raise Exception("Please specify out_to_dir")
@@ -86,81 +98,54 @@ if FLAGS.is_use_sample_data:
     y = np.concatenate((y_train, y_test))
     x = x.reshape((x.shape[0], -1))
     x = np.divide(x, 255.)
+
+    # print(x)    
+    # print(y)
+    print( len(x) )     
+    print( len(y) ) 
+    print( x.shape )     
+    print( y.shape ) 
+    print( x[0].max(axis=0) )
+
+    n_clusters = len(np.unique(y))
+    x.shape
 else:
-    x = [] 
-    y = [] 
+    data = DataGenerator(list_IDs=None, labels=None, batch_size=FLAGS.batch_size, dim=(32,32,32), n_channels=1,
+                 n_classes=10, shuffle=True, datatype='.npy', datadirs=[], is_label_to_categorical=False, is_normalize_image_datatype=False)
 
+    n_clusters - FLAGS.n_classes
 
-    #dir loop
-    items = os.listdir( paths[0] )
-    for item in items:
-
-        if item == '.DS_Store':
-            continue
-
-        lis_img = os.listdir(paths[0]+item)
-        for item_img in lis_img:
-
-            if item_img == '.DS_Store':
-                continue
-
-            if os.path.isfile(paths[0]+item+ "/" +item_img):
-                x.append( cv2.cvtColor(cv2.imread( paths[0]+item+ "/" +item_img ), cv2.COLOR_BGR2GRAY) )
-                y.append( randint(0,29) )    #randint(0,9)
-                y_paths.append( paths[0]+item+ "/" +item_img )
-
-            # if len(x) > 1024:
-            #     break
-
-    x = np.array(x)
-    y = np.array(y)
-            
-    x = x.reshape((x.shape[0], -1))
-    x = np.divide(x, 255.)
-
-# print(x)    
-# print(y)
-print( len(x) )     
-print( len(y) ) 
-print( x.shape )     
-print( y.shape ) 
-print( x[0].max(axis=0) )
-
-n_clusters = len(np.unique(y))
-x.shape
-
-kmeans = KMeans(n_clusters=n_clusters, n_init=20, n_jobs=4)
-y_pred_kmeans = kmeans.fit_predict(x)
-
-metrics.acc(y, y_pred_kmeans)
+kmeans = KMeans(n_clusters=n_clusters, n_init=20, random_state=0, batch_size=FLAGS.batch_size)   #, n_jobs=4)
+y_pred_kmeans = kmeans
+for bi in range(0, data.__len__()):
+    x, y = data.__getitem__(bi)
+    y_pred_kmeans = y_pred_kmeans.partial_fit(x[:,:])
+    
+    metrics.acc(y, y_pred_kmeans)
 
 #dims = [x.shape[-1], 500, 500, 2000, 10]
 dims = [x.shape[-1], 500, 500, 600, 10]
 init = VarianceScaling(scale=1. / 3., mode='fan_in',
                            distribution='uniform')
 pretrain_optimizer = SGD(lr=1, momentum=0.9)
-pretrain_epochs = 1200  # 300
-batch_size = 256
+pretrain_epochs = int(FLAGS.pretrain_epochs) #1200  # 300
+batch_size = FLAGS.batch_size   # 256
 save_dir = './results'
 
 autoencoder, encoder = autoencoder(dims, init=init)
 
 from keras.utils import plot_model
+from IPython.display import Image
 plot_model(autoencoder, to_file='autoencoder.png', show_shapes=True)
-from IPython.display import Image
 Image(filename='autoencoder.png') 
-
-from keras.utils import plot_model
 plot_model(encoder, to_file='encoder.png', show_shapes=True)
-from IPython.display import Image
 Image(filename='encoder.png') 
 
 autoencoder.compile(optimizer=pretrain_optimizer, loss='mse')
-autoencoder.fit(x, x, batch_size=batch_size, epochs=pretrain_epochs) #, callbacks=cb)
+#autoencoder.fit(x, x, batch_size=batch_size, epochs=pretrain_epochs) #, callbacks=cb)
+autoencoder.fit(generator=data, batch_size=batch_size, epochs=pretrain_epochs) #, callbacks=cb)
 autoencoder.save_weights(save_dir + '/ae_weights.h5')
-
-autoencoder.save_weights(save_dir + '/ae_weights.h5')
-
+#autoencoder.save_weights(save_dir + '/ae_weights.h5')
 autoencoder.load_weights(save_dir + '/ae_weights.h5')
 
 class ClusteringLayer(Layer):
@@ -239,7 +224,14 @@ Image(filename='model.png')
 model.compile(optimizer=SGD(0.01, 0.9), loss='kld')
 
 kmeans = KMeans(n_clusters=n_clusters, n_init=20)
-y_pred = kmeans.fit_predict(encoder.predict(x))
+#y_pred = kmeans.fit_predict(encoder.predict(x))
+y_pred = None
+for bi in range(0, data.__len__()):
+    x, y = data.__getitem__(bi)
+    if y_pred == None:
+        y_pred = kmeans.fit_predict(x[:,:])
+    else:
+        y_pred = np.concatenate(y_pred, kmeans.fit_predict(x[:,:]))
 
 y_pred_last = np.copy(y_pred)
 
@@ -252,15 +244,23 @@ def target_distribution(q):
 
 loss = 0
 index = 0
-maxiter = 32000 # 8000
-update_interval = 140
-index_array = np.arange(x.shape[0])
+maxiter = int(FLAGS.maxiter) #32000 # 8000
+update_interval = int(FLAGS.update_interval) #140
+# index_array = np.arange(x.shape[0])
 
 tol = 0.001 # tolerance threshold to stop training
 
 for ite in range(int(maxiter)):
     if ite % update_interval == 0:
-        q = model.predict(x, verbose=0)
+        #q = model.predict(x, verbose=0)
+        q = None
+        for bi in range(0, data.__len__()):
+            x, y = data.__getitem__(bi)
+            if q == None:
+                q = model.predict(x[:,:], verbose=0)
+            else:
+                q = np.concatenate(q, model.predict(x[:,:], verbose=0))
+
         p = target_distribution(q)  # update the auxiliary target distribution p
 
         # evaluate the clustering performance
@@ -279,16 +279,26 @@ for ite in range(int(maxiter)):
             print('delta_label ', delta_label, '< tol ', tol)
             print('Reached tolerance threshold. Stopping training.')
             break
-    idx = index_array[index * batch_size: min((index+1) * batch_size, x.shape[0])]
-    loss = model.train_on_batch(x=x[idx], y=p[idx])
-    index = index + 1 if (index + 1) * batch_size <= x.shape[0] else 0
+    # idx = index_array[index * batch_size: min((index+1) * batch_size, x.shape[0])]
+    # loss = model.train_on_batch(x=x[idx], y=p[idx])
+    # index = index + 1 if (index + 1) * batch_size <= x.shape[0] else 0
+    x, y = data.__getitem__(index)
+    loss = model.train_on_batch(x=x, y=p[idx])
+    index = index + 1 if (index + 1) < data.__len__() else 0
 
 model.save_weights(save_dir + '/DEC_model_final.h5')
 
 model.load_weights(save_dir + '/DEC_model_final.h5')
 
 # Eval.
-q = model.predict(x, verbose=0)
+#q = model.predict(x, verbose=0)
+q = None
+for bi in range(0, data.__len__()):
+    x, y = data.__getitem__(bi)
+    if q == None:
+        q = model.predict(x[:,:], verbose=0)
+    else:
+        q = np.concatenate(q, model.predict(x[:,:], verbose=0))
 p = target_distribution(q)  # update the auxiliary target distribution p
 
 # evaluate the clustering performance
