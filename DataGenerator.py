@@ -4,7 +4,8 @@ import keras
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
     def __init__(self, list_IDs=None, labels=None, batch_size=32, dim=(32,32,32), n_channels=1,
-                 n_classes=10, shuffle=True, datatype='.npy', datadirs=[], is_label_to_categorical=False, is_normalize_image_datatype=False):
+                 n_classes=10, shuffle=True, datatype='.npy', datadirs=[], is_label_to_categorical=False, is_normalize_image_datatype=False, 
+                 is_apply_text_preprocessing = False, is_apply_sequence_preprocessing = False):
         'Initialization need to provide either list_IDs or datadirs(dir paths)'
         self.dim = dim
         self.batch_size = batch_size
@@ -141,6 +142,8 @@ class DataGenerator(keras.utils.Sequence):
                 X[i,] = np.load( ID )   #absolute or relative path to data file
             elif self.datatype == 'imgs_to_gray':
                 X[i,] = cv2.cvtColor(cv2.imread( ID ), cv2.COLOR_BGR2GRAY)    #absolute or relative path to record file
+            elif self.datatype == 'json':
+                X[i,] = cv2.cvtColor(cv2.imread( ID ), cv2.COLOR_BGR2GRAY)    #TODO read as json array
 
             # Store class
             y[i] = self.labels[ID]

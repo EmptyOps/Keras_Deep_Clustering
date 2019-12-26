@@ -30,9 +30,14 @@ ABS_PATh = os.path.dirname(os.path.abspath(__file__)) + "/"
 parser = argparse.ArgumentParser(description='a utility')
 
 parser.add_argument('-d', '--dir_to_process', type=str, nargs='?', help='dir_to_process, separate by pipe if multiple directories')
-parser.add_argument('-o', '--out_to_dir',type=str, nargs='?',help='if provided output will be written to csv(semicolon separated) otherwise to stdout. ')
+parser.add_argument('-o', '--out_to_dir',type=str, nargs='?',help='output will be written to out_to_dir ')
 parser.add_argument('-b', '--is_debug', action='store_true', help='A boolean True False')
 #parser.add_argument('-s', '--is_use_sample_data', action='store_true', help='A boolean True False')
+
+#for embedding models 
+parser.add_argument('--is_apply_text_preprocessing', action='store_true', help='A boolean True False')
+parser.add_argument('--is_apply_sequence_preprocessing', action='store_true', help='A boolean True False')
+
 
 parser.add_argument('--batch_size', type=int, nargs='?', help='batch_size')
 parser.add_argument('--n_classes', type=int, nargs='?', help='n_classes')
@@ -110,10 +115,12 @@ if FLAGS.is_use_sample_data:
     n_clusters = len(np.unique(y))
     x.shape
 else:
-    data = DataGenerator(list_IDs=None, labels=None, batch_size=FLAGS.batch_size, dim=(32,32,32), n_channels=1,
-                 n_classes=10, shuffle=True, datatype='.npy', datadirs=[], is_label_to_categorical=False, is_normalize_image_datatype=False)
+    data = DataGenerator(list_IDs=None, labels=None, batch_size=FLAGS.batch_size, dim=None, n_channels=1,
+                 n_classes=FLAGS.n_classes, shuffle=True, datatype='imgs_to_gray', datadirs=FLAGS.dir_to_process.split('|'), 
+                 is_label_to_categorical=False, is_normalize_image_datatype=True, is_apply_text_preprocessing=FLAGS.is_apply_text_preprocessing, 
+                 is_apply_sequence_preprocessing = FLAGS.is_apply_sequence_preprocessing)
 
-    n_clusters - FLAGS.n_classes
+    n_clusters = FLAGS.n_classes
 
 kmeans = KMeans(n_clusters=n_clusters, n_init=20, random_state=0, batch_size=FLAGS.batch_size)   #, n_jobs=4)
 y_pred_kmeans = kmeans
