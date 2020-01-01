@@ -1,6 +1,10 @@
 import numpy as np
 import keras
 
+import cv2
+from random import randint
+import os, sys
+
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
     def __init__(self, list_IDs=None, labels=None, batch_size=32, dim=(32,32,32), n_channels=1,
@@ -29,11 +33,12 @@ class DataGenerator(keras.utils.Sequence):
         if not labels == None:
             self.labels = labels
         else:
-            self.labels = self.init_random_labels( len(list_IDs), n_classes)
+            if not list_IDs == None:    #for datadirs the labels will be generated at runtime on first load and then updated and maintained on memory for the remaining runtime
+                self.labels = self.init_random_labels( len(list_IDs), n_classes)
 
         self.on_epoch_end()
 
-    def __init_IDs__(self, datadirs):
+    def __init_IDs__(self, list_IDs, datadirs):
         'usefull when number of records is large, to make it easier to even load ids by batch'
 
         # support multiple dirs to make it easier to train large dataset in different dirs without moving them however to offset the gradient leaning towards 
@@ -46,7 +51,8 @@ class DataGenerator(keras.utils.Sequence):
         self.total_records = 0
         sdir = len(datadirs)
         for i in range(0, sdir):
-            self.datadirs_rec_count[i] = len([True for name in os.listdir(self.datadirs[i]) if os.path.isfile(name)])
+            print( "__init_IDs__", self.datadirs[i] )
+            self.datadirs_rec_count.append( len([True for name in os.listdir(self.datadirs[i]) if os.path.isfile( os.path.join( self.datadirs[i], name ) ) ] ) )
             self.total_records = self.total_records + self.datadirs_rec_count[i]
 
 
@@ -54,7 +60,8 @@ class DataGenerator(keras.utils.Sequence):
         ''
         tmp_cnt = 0
         self.list_IDs = []
-        sdir = len(datadirs)
+        self.labels = []
+        sdir = len(self.datadirs)
         self.dir_batch_index = index
         self.bstart = index * self.dir_batch_size
         self.benddd = (index * self.dir_batch_size) + self.dir_batch_size
@@ -64,6 +71,7 @@ class DataGenerator(keras.utils.Sequence):
                     if tmp_cnt >= self.bstart:
                         if tmp_cnt < self.benddd:
                             self.list_IDs.append( name )
+                            self.labels.append( randint(0, self.n_classes) )
                         else:
                             break
 
@@ -80,7 +88,7 @@ class DataGenerator(keras.utils.Sequence):
 
     def init_random_labels(self, list_IDs_len, n_classes):
         'usefull for unsupervised learning. class labels are generated in sequence for reproducibility'
-        return np.random.choice( list_IDs_len, n_classes )
+        return np.random.choice( n_classes, list_IDs_len )
 
 
     def __len__(self):
@@ -88,6 +96,7 @@ class DataGenerator(keras.utils.Sequence):
         if not self.is_dir_based_data_batches:
             return int(np.floor(len(self.list_IDs) / self.batch_size))
         else:
+            print( "__len__", self.total_records, self.batch_size, int(np.floor(self.total_records / self.batch_size)) )
             return int(np.floor(self.total_records / self.batch_size))
 
     def __getitem__(self, index):

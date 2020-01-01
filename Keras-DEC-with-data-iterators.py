@@ -12,7 +12,8 @@ from keras.optimizers import SGD
 from keras import callbacks
 from keras.initializers import VarianceScaling
 # from sklearn.cluster import KMeans
-import keras.initializers.MiniBatchKMeans as KMeans
+#import keras.initializers.MiniBatchKMeans as KMeans
+from sklearn.cluster import MiniBatchKMeans as KMeans
 import metrics
 from DataGenerator import DataGenerator
 
@@ -29,10 +30,10 @@ ABS_PATh = os.path.dirname(os.path.abspath(__file__)) + "/"
 # Instantiate the parser
 parser = argparse.ArgumentParser(description='a utility')
 
-parser.add_argument('-d', '--dir_to_process', type=str, nargs='?', help='dir_to_process, separate by pipe if multiple directories')
+parser.add_argument('-d', '--dir_to_process', type=str, nargs='?', help='dir_to_process, separate by comma "," if multiple directories')
 parser.add_argument('-o', '--out_to_dir',type=str, nargs='?',help='output will be written to out_to_dir ')
 parser.add_argument('-b', '--is_debug', action='store_true', help='A boolean True False')
-#parser.add_argument('-s', '--is_use_sample_data', action='store_true', help='A boolean True False')
+parser.add_argument('-s', '--is_use_sample_data', action='store_true', help='A boolean True False')
 
 #for embedding models 
 parser.add_argument('--is_apply_text_preprocessing', action='store_true', help='A boolean True False')
@@ -40,6 +41,9 @@ parser.add_argument('--is_apply_sequence_preprocessing', action='store_true', he
 
 
 parser.add_argument('--batch_size', type=int, nargs='?', help='batch_size')
+parser.add_argument('--n_dim_1', type=int, nargs='?', help='n_classes')
+parser.add_argument('--n_dim_2', type=int, nargs='?', help='n_classes')
+parser.add_argument('--n_channels', type=int, nargs='?', help='n_channels')
 parser.add_argument('--n_classes', type=int, nargs='?', help='n_classes')
 
 parser.add_argument('-pt', '--pretrain_epochs', type=str, nargs='?', help='pretrain_epochs')
@@ -52,10 +56,10 @@ print(FLAGS)
 if FLAGS.dir_to_process == "":
     paths = []  #specify static here
 else:
-    if not "|" in FLAGS.dir_to_process:
+    if not "," in FLAGS.dir_to_process:
         paths = [FLAGS.dir_to_process+"/" ]
     else:
-        paths = FLAGS.dir_to_process.split("|")
+        paths = FLAGS.dir_to_process.split(",")
 
 if FLAGS.out_to_dir == None or FLAGS.out_to_dir == "":
     raise Exception("Please specify out_to_dir")
@@ -115,8 +119,8 @@ if FLAGS.is_use_sample_data:
     n_clusters = len(np.unique(y))
     x.shape
 else:
-    data = DataGenerator(list_IDs=None, labels=None, batch_size=FLAGS.batch_size, dim=None, n_channels=1,
-                 n_classes=FLAGS.n_classes, shuffle=True, datatype='imgs_to_gray', datadirs=FLAGS.dir_to_process.split('|'), 
+    data = DataGenerator(list_IDs=None, labels=None, batch_size=FLAGS.batch_size, dim=(int(FLAGS.n_dim_1), int(FLAGS.n_dim_2)), n_channels=int(FLAGS.n_channels), 
+                 n_classes=FLAGS.n_classes, shuffle=True, datatype='imgs_to_gray', datadirs=paths, 
                  is_label_to_categorical=False, is_normalize_image_datatype=True, is_apply_text_preprocessing=FLAGS.is_apply_text_preprocessing, 
                  is_apply_sequence_preprocessing = FLAGS.is_apply_sequence_preprocessing)
 
