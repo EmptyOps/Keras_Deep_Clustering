@@ -70,7 +70,7 @@ class DataGenerator(keras.utils.Sequence):
                 for name in os.listdir(self.datadirs[i]):
                     if tmp_cnt >= self.bstart:
                         if tmp_cnt < self.benddd:
-                            self.list_IDs.append( name )
+                            self.list_IDs.append( os.path.join( self.datadirs[i], name ) ) 
                             self.labels.append( randint(0, self.n_classes) )
                         else:
                             break
@@ -87,7 +87,7 @@ class DataGenerator(keras.utils.Sequence):
             self.dir_batch_index = 0
 
     def init_random_labels(self, list_IDs_len, n_classes):
-        'usefull for unsupervised learning. class labels are generated in sequence for reproducibility'
+        'usefull for unsupervised learning.'
         return np.random.choice( n_classes, list_IDs_len )
 
 
@@ -141,7 +141,10 @@ class DataGenerator(keras.utils.Sequence):
     def __data_generation(self, list_IDs_temp):
         'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
         # Initialization
-        X = np.empty((self.batch_size, *self.dim, self.n_channels))
+        if self.n_channels > 1:
+            X = np.empty((self.batch_size, *self.dim, self.n_channels))
+        else:
+            X = np.empty((self.batch_size, *self.dim))
         y = np.empty((self.batch_size), dtype=int)
 
         # Generate data
@@ -150,11 +153,12 @@ class DataGenerator(keras.utils.Sequence):
             if self.datatype == '.npy':
                 X[i,] = np.load( ID )   #absolute or relative path to data file
             elif self.datatype == 'imgs_to_gray':
+                print( "ID", ID )
                 X[i,] = cv2.cvtColor(cv2.imread( ID ), cv2.COLOR_BGR2GRAY)    #absolute or relative path to record file
             elif self.datatype == 'json':
                 X[i,] = cv2.cvtColor(cv2.imread( ID ), cv2.COLOR_BGR2GRAY)    #TODO read as json array
 
             # Store class
-            y[i] = self.labels[ID]
+            y[i] = self.labels[i]
 
         return X, keras.utils.to_categorical(y, num_classes=self.n_classes) if self.is_label_to_categorical == True else y
