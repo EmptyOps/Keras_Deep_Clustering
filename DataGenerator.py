@@ -99,7 +99,7 @@ class DataGenerator(keras.utils.Sequence):
             print( "__len__", self.total_records, self.batch_size, int(np.floor(self.total_records / self.batch_size)) )
             return int(np.floor(self.total_records / self.batch_size))
 
-    def __getitem__(self, index):
+    def __getitem__(self, index, is_return_tuple=True):
         'Generate one batch of data'
 
         #
@@ -121,10 +121,23 @@ class DataGenerator(keras.utils.Sequence):
         # Generate data
         X, y = self.__data_generation(list_IDs_temp)
 
+        print("__getitem__")
+        print(X.shape)
         if self.is_normalize_image_datatype:
+
+            #reshapre
+            X = X.reshape((X.shape[0], -1))
+
+            #normalize
             X = np.divide(X, 255.)
 
-        return X, y
+        print(X.shape)
+        print(y.shape)
+
+        if is_return_tuple:
+            return X, y
+        else:
+            return X
 
     def on_epoch_end(self):
         'Updates indexes after each epoch'
@@ -153,7 +166,7 @@ class DataGenerator(keras.utils.Sequence):
             if self.datatype == '.npy':
                 X[i,] = np.load( ID )   #absolute or relative path to data file
             elif self.datatype == 'imgs_to_gray':
-                print( "ID", ID )
+                #print( "ID", ID )
                 X[i,] = cv2.cvtColor(cv2.imread( ID ), cv2.COLOR_BGR2GRAY)    #absolute or relative path to record file
             elif self.datatype == 'json':
                 X[i,] = cv2.cvtColor(cv2.imread( ID ), cv2.COLOR_BGR2GRAY)    #TODO read as json array

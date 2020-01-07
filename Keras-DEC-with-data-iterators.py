@@ -77,6 +77,8 @@ def autoencoder(dims, act='relu', init='glorot_uniform'):
     return:
         (ae_model, encoder_model), Model of autoencoder and model of encoder
     """
+    print( "autoencoder" )
+    print(dims)
     n_stacks = len(dims) - 1
     # input
     input_img = Input(shape=(dims[0],), name='input')
@@ -93,6 +95,7 @@ def autoencoder(dims, act='relu', init='glorot_uniform'):
     for i in range(n_stacks-1, 0, -1):
         x = Dense(dims[i], activation=act, kernel_initializer=init, name='decoder_%d' % i)(x)
 
+    print(x.shape)
     # output
     x = Dense(dims[0], kernel_initializer=init, name='decoder_0')(x)
     decoded = x
@@ -117,7 +120,11 @@ if FLAGS.is_use_sample_data:
     print( x[0].max(axis=0) )
 
     n_clusters = len(np.unique(y))
-    x.shape
+    print( x.shape )
+    print( y.shape )
+    
+    raise Exception("Mnist sample not supported yet with data generator")
+
 else:
     data = DataGenerator(list_IDs=None, labels=None, batch_size=FLAGS.batch_size, dim=(int(FLAGS.n_dim_1), int(FLAGS.n_dim_2)), n_channels=int(FLAGS.n_channels), 
                  n_classes=FLAGS.n_classes, shuffle=True, datatype='imgs_to_gray', datadirs=paths, 
@@ -128,11 +135,19 @@ else:
 
 kmeans = KMeans(n_clusters=n_clusters, n_init=20, random_state=0, batch_size=FLAGS.batch_size)   #, n_jobs=4)
 y_pred_kmeans = kmeans
-for bi in range(0, data.__len__()):
-    x, y = data.__getitem__(bi)
-    y_pred_kmeans = y_pred_kmeans.partial_fit(x[:,:])
-    
-    metrics.acc(y, y_pred_kmeans)
+if False:   #ToDo temp
+    for bi in range(0, data.__len__()):
+        x, y = data.__getitem__(bi, True)
+        y_pred_kmeans = y_pred_kmeans.partial_fit(x[:,:])
+        
+        ##
+        print( metrics.acc(y, y_pred_kmeans.labels_) )
+else:    
+    x, y = data.__getitem__(0, True)
+
+#to speed up moved out side loop, will it going to change anything with efficiency of the algorithm 
+#print( metrics.acc(y, y_pred_kmeans.labels_) ) #padd entire y
+
 
 #dims = [x.shape[-1], 500, 500, 2000, 10]
 dims = [x.shape[-1], 500, 500, 600, 10]
@@ -154,7 +169,7 @@ Image(filename='encoder.png')
 
 autoencoder.compile(optimizer=pretrain_optimizer, loss='mse')
 #autoencoder.fit(x, x, batch_size=batch_size, epochs=pretrain_epochs) #, callbacks=cb)
-autoencoder.fit(generator=data, batch_size=batch_size, epochs=pretrain_epochs) #, callbacks=cb)
+autoencoder.fit_generator(generator=data, epochs=pretrain_epochs) #, callbacks=cb)
 autoencoder.save_weights(save_dir + '/ae_weights.h5')
 #autoencoder.save_weights(save_dir + '/ae_weights.h5')
 autoencoder.load_weights(save_dir + '/ae_weights.h5')
