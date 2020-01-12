@@ -99,7 +99,7 @@ class DataGenerator(keras.utils.Sequence):
             print( "__len__", self.total_records, self.batch_size, int(np.floor(self.total_records / self.batch_size)) )
             return int(np.floor(self.total_records / self.batch_size))
 
-    def __getitem__(self, index, is_return_tuple=True):
+    def __getitem__(self, index, is_return_tuple=True, is_return_only_x=True):
         'Generate one batch of data'
 
         #
@@ -135,7 +135,10 @@ class DataGenerator(keras.utils.Sequence):
         print(y.shape)
 
         if is_return_tuple:
-            return X, y
+            if is_return_only_x:
+                return X, X
+            else:
+                return X, y
         else:
             return X
 

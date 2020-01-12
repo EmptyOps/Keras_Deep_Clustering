@@ -50,6 +50,8 @@ parser.add_argument('-pt', '--pretrain_epochs', type=str, nargs='?', help='pretr
 parser.add_argument('-mi', '--maxiter', type=str, nargs='?', help='maxiter')
 parser.add_argument('-ui', '--update_interval', type=str, nargs='?', help='update_interval')
 
+parser.add_argument('-cmsp', '--confusion_matrix_save_path', type=str, nargs='?', help='confusion_matrix_save_path')
+
 FLAGS = parser.parse_args()
 print(FLAGS)
 
@@ -63,6 +65,9 @@ else:
 
 if FLAGS.out_to_dir == None or FLAGS.out_to_dir == "":
     raise Exception("Please specify out_to_dir")
+else:
+    if not os.path.exists( FLAGS.out_to_dir ):
+        os.mkdir( FLAGS.out_to_dir )
 
 ####################    
 
@@ -133,24 +138,28 @@ else:
 
     n_clusters = FLAGS.n_classes
 
-kmeans = KMeans(n_clusters=n_clusters, n_init=20, random_state=0, batch_size=FLAGS.batch_size)   #, n_jobs=4)
+print( "n_clusters" )
+print( n_clusters )
+kmeans = KMeans(n_clusters=n_clusters, n_init=20, batch_size=FLAGS.batch_size)   #random_state=0,    #, n_jobs=4)
 y_pred_kmeans = kmeans
-if False:   #ToDo temp
+if True:     #False:   #ToDo temp
     for bi in range(0, data.__len__()):
-        x, y = data.__getitem__(bi, True)
+        x, y = data.__getitem__(bi, True, is_return_only_x=False)
         y_pred_kmeans = y_pred_kmeans.partial_fit(x[:,:])
         
         ##
-        print( metrics.acc(y, y_pred_kmeans.labels_) )
+        print("y ", y.shape, y_pred_kmeans.labels_.shape)
+        #print( metrics.acc(y, y_pred_kmeans.labels_) )
 else:    
-    x, y = data.__getitem__(0, True)
+    x, y = data.__getitem__(0, True, is_return_only_x=False)
 
 #to speed up moved out side loop, will it going to change anything with efficiency of the algorithm 
 #print( metrics.acc(y, y_pred_kmeans.labels_) ) #padd entire y
 
 
 #dims = [x.shape[-1], 500, 500, 2000, 10]
-dims = [x.shape[-1], 500, 500, 600, 10]
+#dims = [x.shape[-1], 500, 500, 600, 10]
+dims = [x.shape[-1], 500, 500, 600, 234]
 init = VarianceScaling(scale=1. / 3., mode='fan_in',
                            distribution='uniform')
 pretrain_optimizer = SGD(lr=1, momentum=0.9)
@@ -249,17 +258,27 @@ Image(filename='model.png')
 
 model.compile(optimizer=SGD(0.01, 0.9), loss='kld')
 
-kmeans = KMeans(n_clusters=n_clusters, n_init=20)
+kmeans = KMeans(n_clusters=n_clusters, n_init=20, batch_size=FLAGS.batch_size)   # random_state=0,  #KMeans(n_clusters=n_clusters, n_init=20)
 #y_pred = kmeans.fit_predict(encoder.predict(x))
+is_first = True
 y_pred = None
 for bi in range(0, data.__len__()):
-    x, y = data.__getitem__(bi)
-    if y_pred == None:
-        y_pred = kmeans.fit_predict(x[:,:])
-    else:
-        y_pred = np.concatenate(y_pred, kmeans.fit_predict(x[:,:]))
+    x, y = data.__getitem__(bi, True, is_return_only_x=False)
+    # if is_first:
+    #     is_first = False
+    #     y_pred = kmeans.fit_predict(x[:,:])
+    # else:
+    #     y_pred = np.concatenate(y_pred, kmeans.fit_predict(x[:,:]))
+    kmeans.fit_predict(x[:,:])
 
-y_pred_last = np.copy(y_pred)
+y_pred_last = kmeans.labels_     #np.copy(y_pred)
+print( "y_pred_last" )
+print( type(y_pred_last) )
+print( y_pred_last.shape )
+print( "kmeans.cluster_centers_ .........................................................................................." )
+print( n_clusters )
+print(  type(kmeans.cluster_centers_) )
+print( kmeans.cluster_centers_.shape )
 
 model.get_layer(name='clustering').set_weights([kmeans.cluster_centers_])
 
@@ -276,25 +295,29 @@ update_interval = int(FLAGS.update_interval) #140
 
 tol = 0.001 # tolerance threshold to stop training
 
+yALL = None
 for ite in range(int(maxiter)):
     if ite % update_interval == 0:
         #q = model.predict(x, verbose=0)
         q = None
         for bi in range(0, data.__len__()):
-            x, y = data.__getitem__(bi)
-            if q == None:
+            x, y = data.__getitem__(bi, True, is_return_only_x=False)
+            if q is None:
                 q = model.predict(x[:,:], verbose=0)
+                yALL = y
             else:
                 q = np.concatenate(q, model.predict(x[:,:], verbose=0))
+                yALL = np.concatenate(yALL, y)
 
         p = target_distribution(q)  # update the auxiliary target distribution p
 
         # evaluate the clustering performance
         y_pred = q.argmax(1)
         if y is not None:
-            acc = np.round(metrics.acc(y, y_pred), 5)
-            nmi = np.round(metrics.nmi(y, y_pred), 5)
-            ari = np.round(metrics.ari(y, y_pred), 5)
+            #ToDo to set accuracy need to compare with yALL
+            acc = 0 # np.round(metrics.acc(y, y_pred), 5)
+            nmi = 0 # np.round(metrics.nmi(y, y_pred), 5)
+            ari = 0 # np.round(metrics.ari(y, y_pred), 5)
             loss = np.round(loss, 5)
             print('Iter %d: acc = %.5f, nmi = %.5f, ari = %.5f' % (ite, acc, nmi, ari), ' ; loss=', loss)
 
@@ -308,8 +331,8 @@ for ite in range(int(maxiter)):
     # idx = index_array[index * batch_size: min((index+1) * batch_size, x.shape[0])]
     # loss = model.train_on_batch(x=x[idx], y=p[idx])
     # index = index + 1 if (index + 1) * batch_size <= x.shape[0] else 0
-    x, y = data.__getitem__(index)
-    loss = model.train_on_batch(x=x, y=p[idx])
+    x, y = data.__getitem__(index, True, is_return_only_x=False)
+    loss = model.train_on_batch(x=x, y=p[ index * FLAGS.batch_size : (index+1) * FLAGS.batch_size ])      #y=p[idx])
     index = index + 1 if (index + 1) < data.__len__() else 0
 
 model.save_weights(save_dir + '/DEC_model_final.h5')
@@ -320,7 +343,7 @@ model.load_weights(save_dir + '/DEC_model_final.h5')
 #q = model.predict(x, verbose=0)
 q = None
 for bi in range(0, data.__len__()):
-    x, y = data.__getitem__(bi)
+    x, y = data.__getitem__(bi, True, is_return_only_x=False)
     if q == None:
         q = model.predict(x[:,:], verbose=0)
     else:
@@ -330,9 +353,9 @@ p = target_distribution(q)  # update the auxiliary target distribution p
 # evaluate the clustering performance
 y_pred = q.argmax(1)
 if y is not None:
-    acc = np.round(metrics.acc(y, y_pred), 5)
-    nmi = np.round(metrics.nmi(y, y_pred), 5)
-    ari = np.round(metrics.ari(y, y_pred), 5)
+    acc = 0 #np.round(metrics.acc(y, y_pred), 5)
+    nmi = 0 #np.round(metrics.nmi(y, y_pred), 5)
+    ari = 0 #np.round(metrics.ari(y, y_pred), 5)
     loss = np.round(loss, 5)
     print('Acc = %.5f, nmi = %.5f, ari = %.5f' % (acc, nmi, ari), ' ; loss=', loss)
 
@@ -340,7 +363,8 @@ import seaborn as sns
 import sklearn.metrics
 import matplotlib.pyplot as plt
 sns.set(font_scale=3)
-confusion_matrix = sklearn.metrics.confusion_matrix(y, y_pred)
+print( "yALL ", type(yALL), type(y_pred), yALL.shape, y_pred.shape )
+confusion_matrix = sklearn.metrics.confusion_matrix(yALL, y_pred)  #(y, y_pred)
 
 #label
 if not FLAGS.out_to_dir == None and not FLAGS.out_to_dir == "":
@@ -349,7 +373,8 @@ if not FLAGS.out_to_dir == None and not FLAGS.out_to_dir == "":
         if not os.path.isdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) ):
             os.mkdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) )
 
-        os.rename( y_paths[i], FLAGS.out_to_dir + "/" + str(y_pred[i]) + "/" + os.path.basename(y_paths[i]) )
+        #ToDo
+        #os.rename( y_paths[i], FLAGS.out_to_dir + "/" + str(y_pred[i]) + "/" + os.path.basename(y_paths[i]) )
 
 
 
@@ -358,7 +383,13 @@ sns.heatmap(confusion_matrix, annot=True, fmt="d", annot_kws={"size": 20});
 plt.title("Confusion matrix", fontsize=30)
 plt.ylabel('True label', fontsize=25)
 plt.xlabel('Clustering label', fontsize=25)
-plt.show()
+if not FLAGS.confusion_matrix_save_path == None and not FLAGS.confusion_matrix_save_path == "":
+    plt.savefig(FLAGS.confusion_matrix_save_path)
+else:
+    plt.show()
+
+input("Confusion matrix created, press enter to continue further...")
+
 
 from sklearn.utils.linear_assignment_ import linear_assignment
 

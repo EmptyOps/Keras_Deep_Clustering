@@ -45,6 +45,8 @@ parser.add_argument('-ui', '--update_interval', type=str, nargs='?', help='updat
 
 parser.add_argument('-csp', '--confusion_matrix_save_path', type=str, nargs='?', help='confusion_matrix_save_path')
 
+parser.add_argument('--n_classes', type=int, nargs='?', help='n_classes')
+
 
 FLAGS = parser.parse_args()
 print(FLAGS)
@@ -122,7 +124,7 @@ else:
 
                 if os.path.isfile(paths[0]+item+ "/" +item_img):
                     x.append( cv2.cvtColor(cv2.imread( paths[0]+item+ "/" +item_img ), cv2.COLOR_BGR2GRAY) )
-                    y.append( randint(0,29) )    #randint(0,9)
+                    y.append( randint(0,FLAGS.n_classes) )    #randint(0,9)
                     y_paths.append( paths[0]+item+ "/" +item_img )
 
                 # if len(x) > 1024:
@@ -186,8 +188,9 @@ print( y.shape )
 print( x[0].max(axis=0) )
 
 n_clusters = len(np.unique(y))
-x.shape
 
+print( "n_clusters" )
+print( n_clusters )
 kmeans = KMeans(n_clusters=n_clusters, n_init=20, n_jobs=4)
 y_pred_kmeans = kmeans.fit_predict(x)
 
@@ -301,8 +304,12 @@ kmeans = KMeans(n_clusters=n_clusters, n_init=20)
 y_pred = kmeans.fit_predict(encoder.predict(x))
 
 y_pred_last = np.copy(y_pred)
-
+print( "kmeans.cluster_centers_ .........................................................................................." )
+print( n_clusters )
+print(  type(kmeans.cluster_centers_) )
+print( kmeans.cluster_centers_.shape )
 model.get_layer(name='clustering').set_weights([kmeans.cluster_centers_])
+
 
 # computing an auxiliary target distribution
 def target_distribution(q):
