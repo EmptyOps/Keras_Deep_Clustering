@@ -20,6 +20,7 @@ from DataGenerator import DataGenerator
 import cv2
 from random import randint
 import os, sys
+import shutil 
 
 ####################
 import argparse
@@ -180,7 +181,7 @@ autoencoder.compile(optimizer=pretrain_optimizer, loss='mse')
 #autoencoder.fit(x, x, batch_size=batch_size, epochs=pretrain_epochs) #, callbacks=cb)
 autoencoder.fit_generator(generator=data, epochs=pretrain_epochs) #, callbacks=cb)
 autoencoder.save_weights(save_dir + '/ae_weights.h5')
-#autoencoder.save_weights(save_dir + '/ae_weights.h5')
+autoencoder.save_weights(save_dir + '/ae_weights.h5')
 autoencoder.load_weights(save_dir + '/ae_weights.h5')
 
 class ClusteringLayer(Layer):
@@ -306,8 +307,12 @@ for ite in range(int(maxiter)):
                 q = model.predict(x[:,:], verbose=0)
                 yALL = y
             else:
-                q = np.concatenate(q, model.predict(x[:,:], verbose=0))
-                yALL = np.concatenate(yALL, y)
+                print( type(q), q.shape ) 
+                qt = model.predict(x[:,:], verbose=0 )
+                print( type(qt), qt.shape ) 
+                q = np.concatenate( ( q, qt ), axis = 0 )
+                print( type(y), yALL.shape, y.shape ) 
+                yALL = np.concatenate( (yALL, y), axis = 0 )
 
         p = target_distribution(q)  # update the auxiliary target distribution p
 
@@ -343,11 +348,11 @@ model.load_weights(save_dir + '/DEC_model_final.h5')
 #q = model.predict(x, verbose=0)
 q = None
 for bi in range(0, data.__len__()):
-    x, y = data.__getitem__(bi, True, is_return_only_x=False)
-    if q == None:
+    x, y = data.__getitem__(bi, True, is_return_only_x=False, is_keep_shuffled_index = True)
+    if q is None:
         q = model.predict(x[:,:], verbose=0)
     else:
-        q = np.concatenate(q, model.predict(x[:,:], verbose=0))
+        q = np.concatenate( ( q, model.predict(x[:,:], verbose=0) ), axis = 0 )
 p = target_distribution(q)  # update the auxiliary target distribution p
 
 # evaluate the clustering performance
@@ -368,14 +373,21 @@ confusion_matrix = sklearn.metrics.confusion_matrix(yALL, y_pred)  #(y, y_pred)
 
 #label
 if not FLAGS.out_to_dir == None and not FLAGS.out_to_dir == "":
+    bi = 0
+    y_paths = None
     sizeyp = len(y_pred)
     for i in range(0, sizeyp):
+        imd = np.mod(i, FLAGS.batch_size)
+        if imd == 0:
+            y_paths = data.__getitem__(bi, True, is_return_only_x=False, is_return_last_paths = True)
+            bi += 1
+
         if not os.path.isdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) ):
             os.mkdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) )
 
         #ToDo
         #os.rename( y_paths[i], FLAGS.out_to_dir + "/" + str(y_pred[i]) + "/" + os.path.basename(y_paths[i]) )
-
+        shutil.copyfile(y_paths[ imd ], FLAGS.out_to_dir + "/" + str(y_pred[i]) + "/" + os.path.basename(y_paths[imd])) 
 
 
 plt.figure(figsize=(16, 14))

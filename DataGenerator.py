@@ -16,6 +16,7 @@ class DataGenerator(keras.utils.Sequence):
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.shuffle = shuffle
+        self.shuffle_cache = None
         self.datatype = datatype
         self.datadirs = datadirs
         self.is_label_to_categorical = is_label_to_categorical
@@ -36,7 +37,7 @@ class DataGenerator(keras.utils.Sequence):
             if not list_IDs == None:    #for datadirs the labels will be generated at runtime on first load and then updated and maintained on memory for the remaining runtime
                 self.labels = self.init_random_labels( len(list_IDs), n_classes)
 
-        self.on_epoch_end()
+        self.on_epoch_end( is_xplicit_call = True )
 
     def __init_IDs__(self, list_IDs, datadirs):
         'usefull when number of records is large, to make it easier to even load ids by batch'
@@ -99,7 +100,7 @@ class DataGenerator(keras.utils.Sequence):
             print( "__len__", self.total_records, self.batch_size, int(np.floor(self.total_records / self.batch_size)) )
             return int(np.floor(self.total_records / self.batch_size))
 
-    def __getitem__(self, index, is_return_tuple=True, is_return_only_x=True):
+    def __getitem__(self, index, is_return_tuple=True, is_return_only_x=True, is_keep_shuffled_index = False, is_return_last_paths = False ):
         'Generate one batch of data'
 
         #
@@ -109,7 +110,16 @@ class DataGenerator(keras.utils.Sequence):
                 self.indexes = np.arange(len(self.list_IDs))
 
                 if self.shuffle == True:
-                    np.random.shuffle(self.indexes)
+                    if is_return_last_paths:
+                        self.indexes = self.shuffle_cache[index]
+                    else:
+                        np.random.shuffle(self.indexes)
+
+                if is_keep_shuffled_index:
+                    if self.shuffle_cache is None:
+                        self.shuffle_cache = {}
+
+                    self.shuffle_cache[index] = self.indexes
 
 
         # Generate indexes of the batch
@@ -117,6 +127,10 @@ class DataGenerator(keras.utils.Sequence):
 
         # Find list of IDs
         list_IDs_temp = [self.list_IDs[k] for k in indexes]
+
+        #
+        if is_return_last_paths:
+            return list_IDs_temp
 
         # Generate data
         X, y = self.__data_generation(list_IDs_temp)
@@ -134,6 +148,10 @@ class DataGenerator(keras.utils.Sequence):
         print(X.shape)
         print(y.shape)
 
+        #if its reached the end of it then call on_epoch_end it's necessary in case of explicit loop calls in the code
+        if (index+1) == self.__len__():
+            self.on_epoch_end( is_xplicit_call = True )
+
         if is_return_tuple:
             if is_return_only_x:
                 return X, X
@@ -142,17 +160,25 @@ class DataGenerator(keras.utils.Sequence):
         else:
             return X
 
-    def on_epoch_end(self):
+    def on_epoch_end(self, is_xplicit_call=False):
         'Updates indexes after each epoch'
+        if not is_xplicit_call:
+            print( "on_epoch_end called..." )
+        else:
+            print( "on_epoch_end called explicitly..." )
+
         if not self.is_dir_based_data_batches:
             self.indexes = np.arange(len(self.list_IDs))
+
+            if self.shuffle == True:
+                np.random.shuffle(self.indexes)
         else:
             self.load_dir_level_ID_batch(0)
             self.indexes = np.arange(len(self.list_IDs))
 
-        #TODO better to do dir array shuffle in case dir based batches
-        if self.shuffle == True:
-            np.random.shuffle(self.indexes)
+            # #TODO better to do dir array shuffle in case dir based batches
+            # if self.shuffle == True:
+            #     np.random.shuffle(self.indexes)
 
     def __data_generation(self, list_IDs_temp):
         'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)

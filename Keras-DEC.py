@@ -18,6 +18,7 @@ from numpy import array
 from random import randint
 import os, sys
 import json
+import shutil 
 
 ####################
 import argparse
@@ -116,6 +117,7 @@ else:
             if item == '.DS_Store':
                 continue
 
+            print(paths[0]+item)
             lis_img = os.listdir(paths[0]+item)
             for item_img in lis_img:
 
@@ -156,7 +158,7 @@ else:
             lenx = len(x)
             total_supported_classes = int(FLAGS.total_supported_classes)
             print("lenx")
-            print(len)
+            print(lenx)
             for i in range(0, lenx):
                 if y[i] < total_supported_classes:
                     x_tmp.append( x[i] )
@@ -257,7 +259,7 @@ class ClusteringLayer(Layer):
         assert len(input_shape) == 2
         input_dim = input_shape[1]
         self.input_spec = InputSpec(dtype=K.floatx(), shape=(None, input_dim))
-        self.clusters = self.add_weight(shape=(self.n_clusters, input_dim), initializer='glorot_uniform', name='clusters')
+        self.clusters = self.add_weight((self.n_clusters, input_dim), initializer='glorot_uniform', name='clusters')
         if self.initial_weights is not None:
             self.set_weights(self.initial_weights)
             del self.initial_weights
@@ -373,17 +375,19 @@ sns.set(font_scale=3)
 confusion_matrix = sklearn.metrics.confusion_matrix(y, y_pred)
 
 #label
-if not FLAGS.out_to_dir == None and not FLAGS.out_to_dir == "":
-    if not FLAGS.dir_to_process == None and not FLAGS.dir_to_process == "":
-        sizeyp = len(y_pred)
-        for i in range(0, sizeyp):
-            if not os.path.isdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) ):
-                os.mkdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) )
+if not FLAGS.is_use_sample_data:
+    if not FLAGS.out_to_dir == None and not FLAGS.out_to_dir == "":
+        if not FLAGS.dir_to_process == None and not FLAGS.dir_to_process == "":
+            sizeyp = len(y_pred)
+            for i in range(0, sizeyp):
+                if not os.path.isdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) ):
+                    os.mkdir( FLAGS.out_to_dir + "/" + str(y_pred[i]) )
 
-            os.rename( y_paths[i], FLAGS.out_to_dir + "/" + str(y_pred[i]) + "/" + os.path.basename(y_paths[i]) )
-    else:
-        with open( FLAGS.out_to_dir + "/Keras-DEC-y_pred.json", 'w') as outfile:
-            json.dump(y_pred.tolist(), outfile)                      
+                #os.rename( y_paths[i], FLAGS.out_to_dir + "/" + str(y_pred[i]) + "/" + os.path.basename(y_paths[i]) )
+                shutil.copyfile( y_paths[i], FLAGS.out_to_dir + "/" + str(y_pred[i]) + "/" + os.path.basename(y_paths[i]) )
+        else:
+            with open( FLAGS.out_to_dir + "/Keras-DEC-y_pred.json", 'w') as outfile:
+                json.dump(y_pred.tolist(), outfile)                      
 
 
 plt.figure(figsize=(16, 14))
