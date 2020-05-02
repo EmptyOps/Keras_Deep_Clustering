@@ -160,9 +160,9 @@ else:
             print("lenx")
             print(lenx)
             for i in range(0, lenx):
-                if y[i] < total_supported_classes:
+                if int(y[i]) < total_supported_classes:
                     x_tmp.append( x[i] )
-                    y_tmp.append( y[i] )
+                    y_tmp.append( int(y[i]) )
 
             x_tmp = array(x_tmp)
             y_tmp = array(y_tmp)
