@@ -164,7 +164,7 @@ else:
                 if int(y[i]) < total_supported_classes:
                     x_tmp.append( x[i] )
                     if FLAGS.is_force_random_classes == 1:
-                        y_tmp.append( randint(int(y[i])*FLAGS.n_classes,(int(y[i])+1)*FLAGS.n_classes) )
+                        y_tmp.append( randint(int(y[i])*FLAGS.n_classes,((int(y[i])+1)*FLAGS.n_classes) - 1) )
                     else:
                         y_tmp.append( int(y[i]) )
 
