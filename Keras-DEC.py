@@ -47,6 +47,7 @@ parser.add_argument('-ui', '--update_interval', type=str, nargs='?', help='updat
 parser.add_argument('-csp', '--confusion_matrix_save_path', type=str, nargs='?', help='confusion_matrix_save_path')
 
 parser.add_argument('--n_classes', type=int, nargs='?', help='n_classes')
+parser.add_argument('--is_force_random_classes', type=int, nargs='?', help='is_force_random_classes')
 
 
 FLAGS = parser.parse_args()
@@ -162,7 +163,10 @@ else:
             for i in range(0, lenx):
                 if int(y[i]) < total_supported_classes:
                     x_tmp.append( x[i] )
-                    y_tmp.append( int(y[i]) )
+                    if FLAGS.is_force_random_classes == 1:
+                        y_tmp.append( randint(int(y[i])*FLAGS.n_classes,(int(y[i])+1)*FLAGS.n_classes) )
+                    else:
+                        y_tmp.append( int(y[i]) )
 
             x_tmp = array(x_tmp)
             y_tmp = array(y_tmp)
